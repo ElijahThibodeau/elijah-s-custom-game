@@ -1,0 +1,267 @@
+# WhackAMole.py
+# Whack-a-letter game using pygame
+
+
+import pygame, random, math
+from pygame.locals import *
+from pygame.font import *
+
+# some colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+DARKGRAY = (47, 79, 79)
+
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+DARKGREEN = (0, 155, 0)
+BLUE = (0, 0, 255)
+
+
+# ---------------------------------------------------------
+
+class letter(pygame.sprite.Sprite):
+
+    def __init__(self):
+        super().__init__()
+        self.name = ""
+        integ = random.randint(0, 3)
+        if integ == 0:
+            self.name = "w"
+        elif integ == 1:
+            self.name = "a"
+        elif integ == 2:
+            self.name = "s"
+        elif integ == 3:
+            self.name = "d"
+        self.image = font.render(self.name, True, BLACK)
+        self.rect = self.image.get_rect()
+        self.dx = 0
+        self.dy = 0
+        while abs(self.dx) < 5 or abs(self.dy) < 5:
+            self.dx = random.randint(-10, 10)
+            self.dy = random.randint(-10, 10)
+
+    # move letter to a new random location
+    # after it is hit
+
+    def speedUp(self):
+        if (dx < 0):
+            dx -= 3
+        else:
+            dx += 3
+        if (dy < 0):
+            dy -= 3
+        else:
+            dy += 3
+
+    def update(self, pt):
+        (left, top) = self.rect.center
+        if(pt != (0,0)):
+            (left,top) = pt
+        self.rect.center = (left + self.dx, top + self.dy)
+
+    def getCenter(self):
+        return self.rect.center
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+    def getName(self):
+        return self.name
+
+    def distToPt(self, obj):
+        (x, y) = obj.getCenter()
+        (cx, cy) = self.getCenter()
+        return int(math.sqrt(pow(cx - x, 2) + pow(cy - y, 2)))
+
+    def getRect(self):
+        return self.rect
+
+# ---------------------------------------------------------
+
+
+class jotaro(pygame.sprite.Sprite):
+
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load("ora.jpg").convert_alpha()
+        self.image = pygame.transform.scale(self.image, (15, 15))
+        self.rect = self.image.get_rect()
+
+    # did the jotaro hit the letter?
+    def hit(self, target):
+        return self.rect.colliderect(target)
+
+    # follows the mouse cursor
+    def update(self, pt):
+        self.rect.center = pt
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+    def getCenter(self):
+        return self.rect.center
+
+
+# -----------------------------------
+
+
+def centerImage(screen, im):
+    x = (scrWidth - im.get_width()) / 2
+    y = (scrHeight - im.get_height()) / 2
+    screen.blit(im, (x, y))
+
+
+# ---------- main -------------
+
+pygame.init()
+screen = pygame.display.set_mode([640, 480])
+screen.fill(DARKGREEN)
+pygame.display.set_caption("oraoraoraora")
+
+scrWidth, scrHeight = screen.get_size()
+
+# hide the mouse cursor
+# pygame.mouse.set_visible(False)
+
+font = pygame.font.Font(None, 40)
+
+# hitSnd = pygame.mixer.Sound('hit.wav')
+# hitSnd.set_volume(1)
+
+# create sprites and a group
+jotaro = jotaro()
+
+# game vars
+hits = 0
+mousePos = (scrWidth / 2, scrHeight / 2)
+isPressed = False
+
+clock = pygame.time.Clock()
+inp = 0  # N= 1 E = 2 S = 3 W = 4 Never Eat Shredded Wheat
+running = True
+playing = True
+
+keyPressed = ""
+spawnCd = 30
+
+letters = []
+letters.append(letter())
+def main():
+    global isPressed, mousePos, clock,running,playing,keyPressed,inp,letters
+    jotaro.update((300,300))
+    while running:
+        keyPressed = ""
+        clock.tick(30)
+        for let in letters:
+            if let.getRect().colliderect(jotaro):
+                running = False
+        # handle events
+        if pygame.time.get_ticks() % spawnCd == 0:
+            letters.append(letter())
+
+        if not playing:
+            endImg = pygame.image.load("end.jfif").convert_alpha()
+            endImg = pygame.transform.scale(endImg, (400, 200))
+            screen.blit(endImg, (100, 100))
+            endIm = font.render("Press escape to quit. ", True, BLACK)
+            screen.blit(endIm, (0, 200))
+            pygame.display.update()
+            while running:
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        running = False
+                    if event.type == KEYDOWN:
+                        if event.key == K_ESCAPE:
+                            running = False
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                running = False
+
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    running = False
+                if event.key == K_UP:
+                    inp = 1
+                if event.key == K_LEFT:
+                    inp = 2
+                if event.key == K_DOWN:
+                    inp = 3
+                if event.key == K_RIGHT:
+                    inp = 4
+                if event.key == K_w:
+                    keyPressed = "w"
+                if event.key == K_a:
+                    keyPressed = "a"
+                if event.key == K_s:
+                    keyPressed = "s"
+                if event.key == K_d:
+                    keyPressed = "d"
+
+            if event.type == MOUSEMOTION:
+                mousePos = pygame.mouse.get_pos()
+
+            if event.type == MOUSEBUTTONDOWN:
+                isPressed = True
+        eliminate(keyPressed)
+        # update game
+        (cLeft, cTop) = jotaro.getCenter()
+        if inp == 1:
+            jotaro.update((cLeft, cTop - 15))
+        if inp == 2:
+            jotaro.update((cLeft - 15, cTop))
+        if inp == 3:
+            jotaro.update((cLeft, cTop + 15))
+        if inp == 4:
+            jotaro.update((cLeft + 15, cTop))
+        if isPressed:
+            isPressed = False
+            if jotaro.hit(letter):
+                # hitSnd.play()
+                hits += 1
+        screen.fill(DARKGREEN)
+        jotaro.draw(screen)
+        for i in range(0,len(letters)):
+            (cLeft,cTop) = letters[i].getCenter()
+            letters[i].update((0,0))
+            teleport(letters[i])
+            letters[i].draw(screen)
+
+        # redraw game
+
+        # time elapsed (in secs)
+        time = int(pygame.time.get_ticks() / 1000)
+        timeIm = font.render(str(time), True, WHITE)
+        screen.blit(timeIm, (10, 10))
+
+        # hitIm = font.render("Hits = " + str(hits), True, WHITE)
+        # centerImage(screen, hitIm)
+        #
+        teleport(jotaro)
+        pygame.display.update()
+
+
+def eliminate(keyPressed):
+    indexes = []
+    a = 0
+    for ind in range(0, len(letters)):
+        letter = letters[ind]
+        if letter.distToPt(jotaro) < 120 and letter.getName() == keyPressed:
+            indexes.append(ind)
+    for ind in indexes:
+        letters.pop(ind - a)
+        a += 1
+
+
+def teleport(obj):
+    (cLeft, cTop) = obj.getCenter()
+    if not cLeft in range(0, scrWidth):
+        obj.update((abs(cLeft - scrWidth), cTop))
+    if not cTop in range(0, scrHeight):
+        obj.update((cLeft, abs(cTop + 20 - scrHeight)))
+main()
+
+pygame.quit()
+
+
